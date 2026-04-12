@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────────
+# RabbitMQ Local Development Stack
+#
+# What runs here:
+#   1. RabbitMQ with Management Plugin
+#      — the broker itself on port 5672
+#      — a web UI on port 15672
+#
+# How to start:
+#   docker compose -f docker/rabbit-compose.yml up -d
+#
+# How to stop:
+#   docker compose -f docker/rabbit-compose.yml down
+#
+# How to stop AND wipe all queues and messages:
+#   docker compose -f docker/rabbit-compose.yml down -v
+#
+# Management UI: http://localhost:15672
+# Default login: guest / guest
+# ─────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  # ── RabbitMQ Broker ────────────────────────────────────────────
+  # The -management image tag bundles the web management plugin.
+  # Without it you'd just get the broker with no visual UI.
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"       # AMQP protocol port — your Spring Boot app connects here
+      - "15672:15672"     # Management UI — open in browser to see queues and messages
+    environment:
+      RABBITMQ_DEFAULT_USER: guest     # default username — change in production
+      RABBITMQ_DEFAULT_PASS: guest     # default password — change in production
+
+      # Virtual host — like a namespace for queues and exchanges.
+      # Using / (root vhost) is fine for local dev.
+      RABBITMQ_DEFAULT_VHOST: /
+
+    # Persist queue data across container restarts.
+    # Without this, all your queues and messages vanish when the container stops.
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Named volume so RabbitMQ data survives docker compose down (without -v)
+volumes:
+  rabbitmq_data:
+    driver: local

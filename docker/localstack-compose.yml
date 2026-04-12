@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────
+# LocalStack — AWS Services Emulator
+#
+# What runs here:
+#   LocalStack emulates AWS services on your machine.
+#   We use it exclusively for SQS in this repo.
+#   No AWS account needed. No cost. Works offline.
+#
+# How to start:
+#   docker compose -f docker/localstack-compose.yml up -d
+#
+# How to stop:
+#   docker compose -f docker/localstack-compose.yml down
+#
+# How to create a queue after starting (using AWS CLI):
+#   aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name orders-queue
+#
+# How to list queues:
+#   aws --endpoint-url=http://localhost:4566 sqs list-queues
+#
+# Note: AWS CLI must be installed. Any credentials work (LocalStack doesn't validate them).
+#   aws configure  → enter anything for key/secret, use us-east-1 as region
+# ─────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  # ── LocalStack ─────────────────────────────────────────────────
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: localstack
+    ports:
+      - "4566:4566"       # single gateway port — all AWS services go through this
+    environment:
+      # Only start SQS — keeps startup fast and memory usage low.
+      # Other available services: s3, sns, dynamodb, lambda, etc.
+      SERVICES: sqs
+
+      # Must match what your Spring Boot app is configured with.
+      AWS_DEFAULT_REGION: us-east-1
+
+      # Set to 1 to see verbose LocalStack logs — useful when debugging
+      DEBUG: 0
+
+      # Persist queues and messages across restarts (LocalStack Pro feature,
+      # community edition resets on restart — just recreate queues on start)
+      PERSISTENCE: 0
+
+    volumes:
+      # Required for LocalStack to work properly with Docker networking
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - localstack_data:/var/lib/localstack
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  localstack_data:
+    driver: local

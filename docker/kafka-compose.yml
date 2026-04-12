@@ -1,0 +1,103 @@
+# ─────────────────────────────────────────────────────────────────
+# Kafka Local Development Stack
+#
+# What runs here:
+#   1. Zookeeper  — Kafka's coordination service (manages broker metadata)
+#   2. Kafka      — the actual message broker
+#   3. Kafka UI   — visual dashboard to inspect topics, messages, consumers
+#
+# How to start:
+#   docker compose -f docker/kafka-compose.yml up -d
+#
+# How to stop:
+#   docker compose -f docker/kafka-compose.yml down
+#
+# How to stop AND wipe all data (clean slate):
+#   docker compose -f docker/kafka-compose.yml down -v
+# ─────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  # ── Zookeeper ──────────────────────────────────────────────────
+  # Kafka uses Zookeeper to track which brokers are alive,
+  # who is the leader for each partition, and store config.
+  # Note: Kafka 3.x+ can run without Zookeeper (KRaft mode),
+  # but Zookeeper is still widely used in production — learn it first.
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"           # default ZK client port — Kafka connects here internally
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000   # heartbeat interval in ms — how often ZK checks health
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Kafka Broker ───────────────────────────────────────────────
+  # The actual message broker. Producers send here, consumers read from here.
+  # In production, you'd run 3+ brokers for fault tolerance.
+  # For local learning, one broker is enough.
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy   # wait for ZK to be ready before starting Kafka
+    ports:
+      - "9092:9092"           # expose to localhost so your Spring Boot app can connect
+    environment:
+      KAFKA_BROKER_ID: 1      # unique ID for this broker — matters in multi-broker clusters
+
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181   # where to find Zookeeper
+
+      # ADVERTISED_LISTENERS is critical — this is the address Kafka tells clients to use
+      # PLAINTEXT://localhost:9092 → your Spring Boot app (outside Docker) connects here
+      # PLAINTEXT_INTERNAL://kafka:29092 → other containers (like Kafka UI) connect here
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+
+      # Replication factor for internal Kafka topics (offsets, transactions, etc.)
+      # Must be <= number of brokers. We have 1 broker so this must be 1.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # Automatically create topics when a producer first publishes to them.
+      # Convenient for learning — in production you'd create topics explicitly.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+      # How long to keep messages (168 hours = 7 days).
+      # After this, old messages are deleted regardless of whether they were consumed.
+      KAFKA_LOG_RETENTION_HOURS: 168
+
+      # Delete old log segments when they exceed this size (1GB per partition).
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── Kafka UI ───────────────────────────────────────────────────
+  # A visual dashboard — think of it as pgAdmin but for Kafka.
+  # Open http://localhost:8080 in your browser after starting this stack.
+  # You can see: topics, partitions, messages, consumer groups, offsets.
+  # Very useful when learning — you can visually confirm messages are arriving.
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-kafka         # display name in the UI
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092   # connect via internal listener
