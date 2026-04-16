@@ -27,7 +27,7 @@ services:
   # The -management image tag bundles the web management plugin.
   # Without it you'd just get the broker with no visual UI.
   rabbitmq:
-    image: rabbitmq:3.12-management
+    image: rabbitmq:3.13-management
     container_name: rabbitmq
     ports:
       - "5672:5672"       # AMQP protocol port — your Spring Boot app connects here

@@ -26,7 +26,7 @@ services:
   # Note: Kafka 3.x+ can run without Zookeeper (KRaft mode),
   # but Zookeeper is still widely used in production — learn it first.
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+    image: confluentinc/cp-zookeeper:7.7.0
     container_name: zookeeper
     ports:
       - "2181:2181"           # default ZK client port — Kafka connects here internally
@@ -44,7 +44,7 @@ services:
   # In production, you'd run 3+ brokers for fault tolerance.
   # For local learning, one broker is enough.
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.7.0
     container_name: kafka
     depends_on:
       zookeeper:
