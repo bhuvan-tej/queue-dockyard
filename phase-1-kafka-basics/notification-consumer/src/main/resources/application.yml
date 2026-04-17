@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: notification-consumer
+
+  kafka:
+    bootstrap-servers: localhost:9092   # same Kafka broker the producer publishes to
+
+    consumer:
+      # consumer group ID — critical concept:
+      # all instances of this app sharing the same group-id
+      # will split the partitions between them (load balancing).
+      # a different group-id would receive ALL messages independently.
+      group-id: notification-group
+
+      # where to start reading if this consumer has never run before
+      # 'earliest' = read from the very beginning of the topic
+      # 'latest'   = only read new messages arriving after startup
+      # use 'earliest' while learning so you don't miss anything
+      auto-offset-reset: earliest
+
+      # how to deserialize the key (orderId — a plain String)
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+      # how to deserialize the value (OrderEvent JSON → Java object)
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+      properties:
+        # tells the JsonDeserializer which Java class to map the JSON into.
+        # must match the exact fully qualified class name.
+        # since OrderEvent lives in the producer, we duplicate the model here —
+        # in production both apps would share a common library for this.
+        spring.json.value.default.type: com.queuedockyard.notificationconsumer.model.OrderEvent
+        spring.json.trusted.packages: "com.queuedockyard.*"
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+
+# custom properties
+app:
+  kafka:
+    topic:
+      orders: order-events   # must match exactly what the producer publishes to
+
+server:
+  port: 8082    # producer is on 8081, Kafka UI on 8080 — use 8082 here

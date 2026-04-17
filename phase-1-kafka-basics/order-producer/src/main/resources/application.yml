@@ -17,6 +17,9 @@ spring:
       # retry sending up to 3 times before giving up
       retries: 3
 
+      properties:
+        spring.json.add.type.headers: false
+
 server:
   port: 8081
 
