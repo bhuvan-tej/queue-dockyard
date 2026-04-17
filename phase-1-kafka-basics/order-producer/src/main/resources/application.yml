@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: order-producer   # name of this service
+
+  kafka:
+    bootstrap-servers: localhost:9092   # where Kafka is running (matches your docker compose)
+
+    producer:
+      # each message gets a unique key (String) and a JSON value
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+      # exactly-once guarantee at the producer level
+      # if Kafka crashes mid-send, it won't write the same message twice
+      acks: all
+
+      # retry sending up to 3 times before giving up
+      retries: 3
+
+server:
+  port: 8081
+
+# custom properties — our own config, not Spring's
+app:
+  kafka:
+    topic:
+      orders: order-events   # topic name we'll publish to
