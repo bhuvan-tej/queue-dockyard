@@ -13,12 +13,12 @@ queue-dockyard/
 │   ├── fundamentals/        ← concepts, patterns, vocabulary, delivery guarantees
 │   └── systems/             ← Kafka, RabbitMQ, SQS deep dives + comparison
 ├── docker/                  ← local infra for all three systems
-├── phase-1-fundamentals/    ← no code, just notes
-├── phase-2-kafka-basics/    ← first producer + consumer
-├── phase-3-kafka-internals/ ← partitions, exactly-once
-├── phase-4-rabbitmq/        ← exchanges, DLQ, retry
-├── phase-5-sqs/             ← SQS via LocalStack
-└── capstone/                ← full e-commerce pipeline
+├── phase-1-kafka-basics/    ← first producer + consumer
+├── phase-2-kafka-internals/ ← partitions, exactly-once
+├── phase-3-rabbitmq/        ← exchanges, DLQ, retry
+├── phase-4-sqs/             ← SQS via LocalStack
+├── capstone/                ← full e-commerce pipeline
+└── README                   ← you are here
 ```
 ---
 
