@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: exactly-once-demo
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+      # acks=all — producer waits for ALL in-sync replicas to confirm the write.
+      # This prevents message loss if the broker crashes right after receiving.
+      acks: all
+
+      # Idempotent producer — Kafka assigns a producer ID and sequence number
+      # to every message. If the same message is sent twice (e.g. retry after
+      # network blip), Kafka deduplicates at the broker level.
+      # This protects against producer-side duplicates only —
+      # consumer-side duplicates still need idempotency keys.
+      properties:
+        enable.idempotence: true
+
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+      # MANUAL offset committing — critical for exactly-once behavior.
+      # With auto-commit (default), Kafka commits the offset on a timer
+      # regardless of whether processing succeeded. If your consumer crashes
+      # after auto-commit but before finishing the work, the message is lost.
+      # With MANUAL, you commit only after successful processing.
+      enable-auto-commit: false
+
+      auto-offset-reset: earliest
+
+      properties:
+        spring.json.trusted.packages: "com.queuedockyard.*"
+
+    # Because we disabled auto-commit, we must tell the listener
+    # container to use MANUAL_IMMEDIATE acknowledgement mode.
+    # This means: commit the offset exactly when we call ack.acknowledge()
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+
+# custom properties
+app:
+  kafka:
+    topic:
+      payments: payment-events
+
+server:
+  port: 8084
