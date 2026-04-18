@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: multi-partition-demo
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    consumer:
+      # All instances of this app share the same group-id.
+      # This is what makes Kafka split partitions between them.
+      # If you changed this to a different group-id, each instance
+      # would receive ALL messages — independent consumption.
+      group-id: partition-demo-group
+
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+      properties:
+        # trust our model package for deserialization
+        spring.json.trusted.packages: "com.queuedockyard.*"
+
+# custom properties
+app:
+  kafka:
+    topic:
+      inventory: inventory-events   # topic with 3 partitions — one per consumer instance
+
+# server port is intentionally NOT set here.
+# we will override it at runtime when launching multiple instances:
+#   instance 1: mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8083
+#   instance 2: mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8084
+#   instance 3: mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8085
+# this lets us run 3 instances of the same app locally
+server:
+  port: 8083
