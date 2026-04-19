@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: job-queue-demo
+
+  rabbitmq:
+    host: localhost
+    port: 5672          # AMQP protocol port — matches rabbit-compose.yml
+    username: guest
+    password: guest
+    virtual-host: /     # root vhost — fine for local dev
+
+    listener:
+      simple:
+        # MANUAL ack mode — consumer explicitly ACKs after successful processing.
+        # If the consumer crashes before ACKing, RabbitMQ requeues the message.
+        # AUTO would ACK immediately on delivery — risky, can lose messages.
+        acknowledge-mode: manual
+
+        # How many messages RabbitMQ pushes to a consumer before
+        # waiting for an ACK. Setting to 1 means fair dispatch —
+        # a busy worker won't receive new messages until it ACKs the current one.
+        # This is critical for load balancing across multiple workers.
+        prefetch: 1
+
+# ── Custom properties — our own config ────────────────────────────
+app:
+  rabbitmq:
+
+    # Direct exchange — routes by exact binding key match
+    direct:
+      exchange: direct.orders.exchange
+      queue: direct.orders.queue
+      routing-key: order.process
+
+    # Fanout exchange — broadcasts to ALL bound queues
+    # No routing key needed — fanout ignores it
+    fanout:
+      exchange: fanout.notifications.exchange
+      queue-email: fanout.notifications.email.queue
+      queue-sms: fanout.notifications.sms.queue
+      queue-push: fanout.notifications.push.queue
+
+    # Topic exchange — routes by pattern matching
+    # order.placed → matches order.* and order.#
+    # order.shipped → matches order.* and order.#
+    # payment.success → matches payment.* but not order.*
+    topic:
+      exchange: topic.events.exchange
+      queue-orders: topic.orders.queue
+      queue-payments: topic.payments.queue
+      routing-key-orders: order.*       # matches order.placed, order.shipped etc.
+      routing-key-payments: payment.*   # matches payment.success, payment.failed etc.
+
+server:
+  port: 8085
