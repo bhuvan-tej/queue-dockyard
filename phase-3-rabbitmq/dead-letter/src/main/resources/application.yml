@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: dead-letter
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+
+    listener:
+      simple:
+        # Manual ACK — we control exactly when a message is acknowledged.
+        # This is required for retry logic to work correctly.
+        acknowledge-mode: manual
+
+        # Only push 1 message at a time to each consumer.
+        # Ensures a failing consumer doesn't hoard messages
+        # while it keeps retrying the same broken one.
+        prefetch: 1
+
+# ── Custom properties ──────────────────────────────────────────────
+app:
+  rabbitmq:
+
+    # Main queue — where normal messages arrive
+    main:
+      exchange: orders.exchange
+      queue: orders.queue
+      routing-key: order.process
+      # Maximum number of processing attempts before
+      # giving up and sending to DLQ
+      max-retries: 3
+      retry-delay-ms: 2000
+
+    # Dead Letter Queue — where messages go after max retries
+    # Completely separate from the main queue
+    dlq:
+      exchange: orders.dlq.exchange
+      queue: orders.dlq.queue
+      routing-key: order.process.dlq
+
+server:
+  port: 8086
