@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: localstack
+
+# ── AWS / LocalStack configuration ────────────────────────────────
+aws:
+  # LocalStack endpoint — all AWS services available on this port.
+  # This overrides the real AWS endpoint so all calls go to LocalStack.
+  endpoint: http://localhost:4566
+
+  region: us-east-1
+
+  # LocalStack does not validate credentials — any value works.
+  # In production these would come from IAM roles or environment variables.
+  credentials:
+    access-key: test
+    secret-key: test
+
+  sqs:
+    # Standard queue — at-least-once, high throughput, no ordering guarantee
+    standard-queue-name: orders-standard-queue
+
+    # FIFO queue — exactly-once, strict ordering, lower throughput
+    # FIFO queue names MUST end with .fifo — AWS enforces this
+    fifo-queue-name: orders-fifo-queue.fifo
+
+    # How long (seconds) a received message is hidden from other consumers.
+    # If not deleted within this time, message becomes visible again.
+    # This is SQS's equivalent of RabbitMQ's unACKed message requeue.
+    visibility-timeout: 30
+
+    # How long (seconds) to wait for messages when the queue is empty.
+    # Long polling (> 0) is more efficient than short polling (0) —
+    # reduces empty responses and AWS API costs.
+    wait-time-seconds: 5
+
+server:
+  port: 8087
