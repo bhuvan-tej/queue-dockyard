@@ -1,0 +1,97 @@
+# ─────────────────────────────────────────────────────────────────
+# Monitoring Stack
+#
+# What runs here:
+#   1. Redis      — production-grade idempotency key store
+#   2. Prometheus — scrapes metrics from all Spring Boot apps
+#   3. Grafana    — visualizes Prometheus metrics as dashboards
+#
+# How to start:
+#   docker compose -f docker/monitoring-compose.yml up -d
+#
+# How to stop:
+#   docker compose -f docker/monitoring-compose.yml down
+#
+# Dashboards:
+#   Grafana   → http://localhost:3000  (admin / admin)
+#   Prometheus → http://localhost:9090
+# ─────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  # ── Redis ──────────────────────────────────────────────────────
+  # Used as the idempotency key store in exactly-once-demo
+  # and capstone ecommerce app.
+  # Replaces the in-memory store — survives application restarts.
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"     # default Redis port
+    command: redis-server --appendonly yes   # persist data to disk
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Prometheus ─────────────────────────────────────────────────
+  # Scrapes /actuator/prometheus endpoint from all Spring Boot apps.
+  # Stores time-series metrics data.
+  # Config file tells Prometheus which apps to scrape and how often.
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"     # Prometheus UI + API
+    volumes:
+      # mount our config file into the container
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      # how long to keep metrics data
+      - '--storage.tsdb.retention.time=7d'
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Grafana ────────────────────────────────────────────────────
+  # Connects to Prometheus as a data source.
+  # We pre-configure the Prometheus datasource automatically
+  # using the provisioning volume mount below.
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"     # Grafana UI
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # disable login prompt for local dev
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # auto-provision Prometheus as a datasource on first start
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────
+# Prometheus scrape configuration.
+#
+# Prometheus pulls metrics by hitting /actuator/prometheus
+# on each Spring Boot app every 15 seconds.
+#
+# Each job_name corresponds to one Spring Boot application.
+# targets: host.docker.internal:<port> is how a Docker container
+# reaches a process running on your host machine (localhost).
+#
+# On Linux replace host.docker.internal with your machine's
+# local IP address (e.g. 172.17.0.1)
+# ─────────────────────────────────────────────────────────────────
+
+global:
+  scrape_interval: 15s        # scrape every 15 seconds
+  evaluation_interval: 15s    # evaluate rules every 15 seconds
+
+scrape_configs:
+
+  # Prometheus scrapes itself — useful for monitoring Prometheus health
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ── Phase 2 ──────────────────────────────────────────────────
+  - job_name: 'order-producer'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8081']
+
+  - job_name: 'notification-consumer'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8082']
+
+  # ── Phase 3 ──────────────────────────────────────────────────
+  - job_name: 'multi-partition'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8083']
+
+  - job_name: 'exactly-once'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8084']
+
+  # ── Phase 4 ──────────────────────────────────────────────────
+  - job_name: 'job-queue'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8085']
+
+  - job_name: 'dead-letter'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8086']
+
+  # ── Phase 5 ──────────────────────────────────────────────────
+  - job_name: 'localstack-sqs'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8087']
+
+  # ── Capstone ─────────────────────────────────────────────────
+  - job_name: 'ecommerce'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8088']

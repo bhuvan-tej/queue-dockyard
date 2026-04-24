@@ -1,0 +1,16 @@
+# ─────────────────────────────────────────────────────────────────
+# Tells Grafana where to find dashboard JSON files.
+# Any .json file placed in the path below is auto-loaded.
+# ─────────────────────────────────────────────────────────────────
+
+apiVersion: 1
+
+providers:
+  - name: 'queue-dockyard'
+    orgId: 1
+    folder: 'Queue Dockyard'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards
