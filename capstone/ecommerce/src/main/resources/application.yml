@@ -61,5 +61,35 @@ app:
       email: ecommerce.email.queue
       sms: ecommerce.sms.queue
 
+  # ── Redis ──────────────────────────────────────────────────────
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      # no password — local dev only
+      # in production always set a password
+
+# ── Actuator ───────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        # expose all actuator endpoints — restrict in production
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      # show full health details including Redis, Kafka, RabbitMQ status
+      show-details: always
+  metrics:
+    tags:
+      # this tag is added to every metric from this app
+      # makes it easy to filter by app in Prometheus/Grafana
+      application: ${spring.application.name}
+    distribution:
+      # track percentiles for HTTP request duration
+      # gives you p50, p95, p99 latency in Grafana
+      percentiles-histogram:
+        http.server.requests: true
+
 server:
   port: 8088

@@ -3,7 +3,9 @@ package com.queuedockyard.ecommerce.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.queuedockyard.ecommerce.metrics.MetricsService;
 import com.queuedockyard.ecommerce.model.OrderEvent;
+import com.queuedockyard.ecommerce.store.RedisIdempotencyStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +36,9 @@ import java.util.UUID;
  * true distributed transactions across three different
  * messaging systems are not practically achievable.
  * We rely on idempotency keys in each consumer instead.
+ *
+ * Redis idempotency check — prevents duplicate publishing
+ * Metrics recording — tracks publish count and duration
  */
 @Slf4j
 @Service
@@ -43,6 +48,8 @@ public class OrderEventPublisher {
     private final RabbitTemplate rabbitTemplate;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
+    private final MetricsService metricsService;
+    private final RedisIdempotencyStore idempotencyStore;
 
     @Value("${app.kafka.topics.orders}")
     private String kafkaOrdersTopic;
@@ -55,12 +62,13 @@ public class OrderEventPublisher {
 
     public OrderEventPublisher(KafkaTemplate<String, OrderEvent> kafkaTemplate,
                                RabbitTemplate rabbitTemplate,
-                               SqsClient sqsClient) {
+                               SqsClient sqsClient, MetricsService metricsService, RedisIdempotencyStore idempotencyStore) {
         this.kafkaTemplate = kafkaTemplate;
         this.rabbitTemplate = rabbitTemplate;
         this.sqsClient = sqsClient;
-        this.objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule());
+        this.metricsService = metricsService;
+        this.idempotencyStore = idempotencyStore;
+        this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     }
 
     /**
@@ -84,6 +92,12 @@ public class OrderEventPublisher {
         // generate the idempotency key — used across all three systems
         String messageId = UUID.randomUUID().toString();
 
+        if (idempotencyStore.isAlreadyProcessed(messageId)) {
+            log.warn("Duplicate publish attempt detected | messageId: {}", messageId);
+            metricsService.recordDuplicateDetected();
+            return messageId;
+        }
+
         OrderEvent event = OrderEvent.builder()
                 .messageId(messageId)
                 .orderId(orderId)
@@ -96,16 +110,25 @@ public class OrderEventPublisher {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        log.info("Publishing order event | messageId: {} | orderId: {} | customerId: {}",
-                messageId, orderId, customerId);
+        log.info("Publishing order event | messageId: {} | orderId: {} | customerId: {}", messageId, orderId, customerId);
+
+        // record publish duration across all three systems
+        long start = System.nanoTime();
 
         // publish to all three — independent failures don't stop the others
         publishToKafka(event);
         publishToRabbitMQ(event);
         publishToSqs(event);
 
-        log.info("Order event published to all systems | messageId: {} | orderId: {}",
-                messageId, orderId);
+        metricsService.recordPublishDuration(System.nanoTime() - start);
+
+        // mark as published — prevents duplicate publishing on retry
+        idempotencyStore.markAsProcessed(messageId);
+
+        // record business metric
+        metricsService.recordOrderPlaced();
+
+        log.info("Order event published to all systems | messageId: {} | orderId: {}", messageId, orderId);
 
         return messageId;
     }

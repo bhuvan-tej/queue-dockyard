@@ -1,0 +1,589 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": {
+    "list": []
+  },
+  "description": "Queue Dockyard — E-commerce Event Pipeline Monitoring",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Order Pipeline Overview",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Total orders placed via REST endpoint",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "auto"
+      },
+      "title": "Orders Placed",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "orders_placed_total{application=\"ecommerce\"}",
+          "legendFormat": "Orders"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Total inventory updates processed",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "auto"
+      },
+      "title": "Inventory Processed",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "inventory_processed_total{application=\"ecommerce\"}",
+          "legendFormat": "Inventory"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Total analytics events recorded",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "auto"
+      },
+      "title": "Analytics Recorded",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "analytics_processed_total{application=\"ecommerce\"}",
+          "legendFormat": "Analytics"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Total email notifications sent",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "orange", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "auto"
+      },
+      "title": "Emails Sent",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "notifications_email_sent_total{application=\"ecommerce\"}",
+          "legendFormat": "Emails"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Total SMS notifications sent",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "yellow", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "auto"
+      },
+      "title": "SMS Sent",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "notifications_sms_sent_total{application=\"ecommerce\"}",
+          "legendFormat": "SMS"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Total invoices generated via SQS",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "teal", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "id": 7,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "auto"
+      },
+      "title": "Invoices Generated",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "invoices_generated_total{application=\"ecommerce\"}",
+          "legendFormat": "Invoices"
+        }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 8,
+      "title": "Order Rate Over Time",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Rate of orders and downstream processing per minute",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqpm"
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": ["last", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Pipeline Throughput — Events per Minute",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(orders_placed_total{application=\"ecommerce\"}[1m]) * 60",
+          "legendFormat": "Orders Placed"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(inventory_processed_total{application=\"ecommerce\"}[1m]) * 60",
+          "legendFormat": "Inventory Processed"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(analytics_processed_total{application=\"ecommerce\"}[1m]) * 60",
+          "legendFormat": "Analytics Recorded"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(notifications_email_sent_total{application=\"ecommerce\"}[1m]) * 60",
+          "legendFormat": "Emails Sent"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(notifications_sms_sent_total{application=\"ecommerce\"}[1m]) * 60",
+          "legendFormat": "SMS Sent"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(invoices_generated_total{application=\"ecommerce\"}[1m]) * 60",
+          "legendFormat": "Invoices Generated"
+        }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 10,
+      "title": "Publish Duration",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Time taken to publish order event to all three systems",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": ["last", "mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "title": "Order Publish Duration (p50 / p95 / p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.50, rate(order_publish_duration_seconds_bucket{application=\"ecommerce\"}[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.95, rate(order_publish_duration_seconds_bucket{application=\"ecommerce\"}[5m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.99, rate(order_publish_duration_seconds_bucket{application=\"ecommerce\"}[5m]))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Total duplicate messages detected and skipped",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 12,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "value_and_name"
+      },
+      "title": "Duplicate Messages Detected",
+      "description": "Green = 0 duplicates (healthy). Yellow/Red = investigate.",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "messages_duplicates_detected_total{application=\"ecommerce\"}",
+          "legendFormat": "Duplicates"
+        }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "id": 13,
+      "title": "JVM Health",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "JVM heap memory used vs committed",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": ["last", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "title": "JVM Heap Memory",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "jvm_memory_used_bytes{application=\"ecommerce\", area=\"heap\"}",
+          "legendFormat": "Heap Used"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "jvm_memory_committed_bytes{application=\"ecommerce\", area=\"heap\"}",
+          "legendFormat": "Heap Committed"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Number of active threads in the JVM",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": ["last", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "title": "JVM Threads",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "jvm_threads_live_threads{application=\"ecommerce\"}",
+          "legendFormat": "Live Threads"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "jvm_threads_daemon_threads{application=\"ecommerce\"}",
+          "legendFormat": "Daemon Threads"
+        }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "id": 16,
+      "title": "HTTP API",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "HTTP request rate and latency for the orders endpoint",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": ["last", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(http_server_requests_seconds_count{application=\"ecommerce\", uri=\"/api/orders\"}[1m])",
+          "legendFormat": "POST /api/orders"
+        }
+      ]
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "HTTP response latency percentiles",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": ["last", "mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "title": "HTTP Request Latency (p50 / p95 / p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{application=\"ecommerce\", uri=\"/api/orders\"}[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{application=\"ecommerce\", uri=\"/api/orders\"}[5m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{application=\"ecommerce\", uri=\"/api/orders\"}[5m]))",
+          "legendFormat": "p99"
+        }
+      ]
+    }
+
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["kafka", "rabbitmq", "sqs", "ecommerce"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Queue Dockyard — Ecommerce Pipeline",
+  "uid": "queue-dockyard-ecommerce",
+  "version": 1
+}

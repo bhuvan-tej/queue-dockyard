@@ -22,7 +22,7 @@ version: '3.8'
 services:
 
   # ── Redis ──────────────────────────────────────────────────────
-  # Used as the idempotency key store in exactly-once-demo
+  # Used as the idempotency key store in exactly-once
   # and capstone ecommerce app.
   # Replaces the in-memory store — survives application restarts.
   redis:

@@ -33,6 +33,18 @@ Consumer  Consumer
 
 ---
 
+## Monitoring Stack
+
+This app is fully instrumented with Spring Boot Actuator,
+Micrometer, and Prometheus. A Grafana dashboard visualizes
+all metrics in real time.
+
+```
+Spring Boot App → /actuator/prometheus → Prometheus → Grafana
+```
+
+---
+
 ## Why Each System Is Used Here
 
 | System   | Consumer          | Reason                                       |
@@ -87,10 +99,14 @@ ecommerce/
      │   │   └── InvoiceConsumer.java       ← SQS polling loop
      │   ├── controller/
      │   │   └── OrderController.java       ← POST /api/orders
+     |   ├── metrics/
+     │   │   └── MetricsService.java        ← custom Micrometer metrics
      │   ├── model/
      │   │   └── OrderEvent.java            ← shared event model
      │   ├── service/
      │   │   └── OrderEventPublisher.java   ← publishes to all three systems
+     │   ├── store/
+     │   │   └── RedisIdempotencyStore.java   ← Redis-backed idempotency key store
      │   └── EcommerceApplication.java
      └── resources/
          └── application.yml
@@ -112,6 +128,9 @@ docker compose -f docker/rabbit-compose.yml up -d
 # terminal 3 — LocalStack
 docker compose -f docker/localstack-compose.yml up -d
 
+# Start the monitoring stack
+docker compose -f docker/monitoring-compose.yml up -d
+
 # verify all are healthy
 docker ps
 ```
@@ -128,6 +147,15 @@ App starts on port **8088**.
 ---
 
 ## Place an Order
+
+### Health check
+
+```
+curl http://localhost:8088/actuator/health
+```
+
+Shows status of Redis, Kafka, RabbitMQ, and disk space.
+All components should show UP before placing orders.
 
 ```bash
 curl -X POST http://localhost:8088/api/orders \
@@ -168,6 +196,17 @@ INVOICE | generated and deleted from SQS
 
 All five consumers respond to a single order placement.
 
+## Grafana Dashboard
+
+Open http://localhost:3000 → Dashboards → Queue Dockyard
+
+The dashboard auto-refreshes every 10 seconds and shows:
+- Order pipeline throughput across all 5 consumers
+- Publish duration p50/p95/p99
+- Duplicate message detection count
+- JVM heap memory and thread counts
+- HTTP request rate and latency
+
 ---
 
 ## Configuration
@@ -178,3 +217,43 @@ All five consumers respond to a single order placement.
 | `app.rabbitmq.exchange`      | `ecommerce.notifications.exchange` | Fanout exchange    |
 | `aws.sqs.invoice-queue-name` | `invoice-queue`                    | SQS invoice queue  |
 | `server.port`                | `8088`                             | HTTP port          |
+
+---
+
+## Production Hardening Applied
+
+| Pattern             | Implementation                                      |
+|---------------------|-----------------------------------------------------|
+| Health checks       | Spring Boot Actuator `/actuator/health`             |
+| Metrics exposure    | Micrometer + Prometheus at `/actuator/prometheus`   |
+| Redis idempotency   | `RedisIdempotencyStore` replaces in-memory store    |
+| Business metrics    | `MetricsService` — counters and timers per consumer |
+| Publish duration    | Timer wrapping all three system publishes           |
+| Duplicate detection | Counter incremented when duplicate messageId found  |
+
+
+### Idempotency — In-memory vs Redis
+
+Phase 2 used an in-memory store for processed message IDs.
+The capstone uses Redis:
+
+|                         | In-memory | Redis        |
+|-------------------------|-----------|--------------|
+| Survives restart        | ❌         | ✅            |
+| Shared across instances | ❌         | ✅            |
+| Auto-expiry (TTL)       | ❌         | ✅ (24 hours) |
+| Performance             | O(1)      | O(1)         |
+
+```
+// check before processing
+if (idempotencyStore.isAlreadyProcessed(event.getMessageId())) {
+    metricsService.recordDuplicateDetected();
+    return;
+}
+
+// process the event
+processOrder(event);
+
+// mark after success — never before
+idempotencyStore.markAsProcessed(event.getMessageId());
+```

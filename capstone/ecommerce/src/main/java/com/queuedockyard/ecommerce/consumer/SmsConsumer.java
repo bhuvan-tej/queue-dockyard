@@ -1,5 +1,6 @@
 package com.queuedockyard.ecommerce.consumer;
 
+import com.queuedockyard.ecommerce.metrics.MetricsService;
 import com.queuedockyard.ecommerce.model.OrderEvent;
 import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,12 @@ import java.io.IOException;
 @Component
 public class SmsConsumer {
 
+    private final MetricsService metricsService;
+
+    public SmsConsumer(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
+
     @RabbitListener(queues = "${app.rabbitmq.queues.sms}")
     public void onOrderEvent(OrderEvent event,
                              Channel channel,
@@ -41,6 +48,8 @@ public class SmsConsumer {
                     event.getAmount());
 
             channel.basicAck(deliveryTag, false);
+
+            metricsService.recordSmsSent();
 
             log.info("SMS | sent and ACKed | messageId: {}", event.getMessageId());
 

@@ -2,6 +2,7 @@ package com.queuedockyard.ecommerce.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.queuedockyard.ecommerce.metrics.MetricsService;
 import com.queuedockyard.ecommerce.model.OrderEvent;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -38,6 +39,7 @@ public class InvoiceConsumer {
     private final ObjectMapper objectMapper;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final MetricsService metricsService;
 
     @Value("${aws.sqs.invoice-queue-name}")
     private String invoiceQueueName;
@@ -45,8 +47,9 @@ public class InvoiceConsumer {
     @Value("${aws.sqs.wait-time-seconds}")
     private int waitTimeSeconds;
 
-    public InvoiceConsumer(SqsClient sqsClient) {
+    public InvoiceConsumer(SqsClient sqsClient, MetricsService metricsService) {
         this.sqsClient = sqsClient;
+        this.metricsService = metricsService;
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule());
     }
@@ -117,6 +120,8 @@ public class InvoiceConsumer {
 
             log.info("INVOICE | generated and deleted from SQS | messageId: {}",
                     event.getMessageId());
+
+            metricsService.recordInvoiceGenerated();
 
         } catch (Exception e) {
             log.error("INVOICE | processing failed | sqsId: {} | reason: {}",

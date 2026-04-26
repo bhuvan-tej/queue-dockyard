@@ -1,5 +1,6 @@
 package com.queuedockyard.ecommerce.consumer;
 
+import com.queuedockyard.ecommerce.metrics.MetricsService;
 import com.queuedockyard.ecommerce.model.OrderEvent;
 import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,12 @@ import java.io.IOException;
 @Component
 public class EmailConsumer {
 
+    private final MetricsService metricsService;
+
+    public EmailConsumer(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
+
     @RabbitListener(queues = "${app.rabbitmq.queues.email}")
     public void onOrderEvent(OrderEvent event,
                              Channel channel,
@@ -43,6 +50,8 @@ public class EmailConsumer {
                     event.getAmount());
 
             channel.basicAck(deliveryTag, false);
+
+            metricsService.recordEmailSent();
 
             log.info("EMAIL | sent and ACKed | messageId: {}", event.getMessageId());
 

@@ -1,5 +1,6 @@
 package com.queuedockyard.ecommerce.consumer;
 
+import com.queuedockyard.ecommerce.metrics.MetricsService;
 import com.queuedockyard.ecommerce.model.OrderEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -27,6 +28,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class AnalyticsConsumer {
 
+    private final MetricsService metricsService;
+
+    public AnalyticsConsumer(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
+
     @KafkaListener(
             topics = "${app.kafka.topics.orders}",
             groupId = "ecommerce-analytics-group",
@@ -50,6 +57,8 @@ public class AnalyticsConsumer {
                 event.getItems());
 
         acknowledgment.acknowledge();
+
+        metricsService.recordAnalyticsProcessed();
 
         log.info("ANALYTICS | recorded | orderId: {}", event.getOrderId());
     }

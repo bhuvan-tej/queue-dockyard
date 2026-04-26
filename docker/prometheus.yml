@@ -23,7 +23,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # ── Phase 2 ──────────────────────────────────────────────────
+  # ── Phase 1 ──────────────────────────────────────────────────
   - job_name: 'order-producer'
     metrics_path: '/actuator/prometheus'
     static_configs:
@@ -34,7 +34,7 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:8082']
 
-  # ── Phase 3 ──────────────────────────────────────────────────
+  # ── Phase 2 ──────────────────────────────────────────────────
   - job_name: 'multi-partition'
     metrics_path: '/actuator/prometheus'
     static_configs:
@@ -45,7 +45,7 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:8084']
 
-  # ── Phase 4 ──────────────────────────────────────────────────
+  # ── Phase 3 ──────────────────────────────────────────────────
   - job_name: 'job-queue'
     metrics_path: '/actuator/prometheus'
     static_configs:
@@ -56,7 +56,7 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:8086']
 
-  # ── Phase 5 ──────────────────────────────────────────────────
+  # ── Phase 4 ──────────────────────────────────────────────────
   - job_name: 'localstack-sqs'
     metrics_path: '/actuator/prometheus'
     static_configs:
