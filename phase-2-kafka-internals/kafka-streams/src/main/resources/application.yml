@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: kafka-streams
+
+  kafka:
+    # ── Kafka Streams specific config ───────────────────────────
+    streams:
+      # application.id is the Kafka Streams equivalent of consumer group-id.
+      # All instances with the same application.id form one stream processing group.
+      # Kafka distributes partitions across them automatically — same as consumers.
+      # IMPORTANT: must be unique per Kafka Streams application.
+      application-id: kafka-streams-order-processor
+
+      bootstrap-servers: localhost:9092
+
+      # default serializer/deserializer for keys and values in streams.
+      # JsonSerde handles our OrderEvent objects.
+      # We override per-stream where needed.
+      properties:
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.springframework.kafka.support.serializer.JsonSerde
+
+        # trusted packages for JsonSerde deserialization
+        spring.json.trusted.packages: "com.queuedockyard.*"
+
+        # how often Kafka Streams commits processed offsets (ms)
+        # lower = more frequent commits = less reprocessing on restart
+        # higher = better throughput
+        commit.interval.ms: 1000
+
+    # ── Regular producer config for the test event publisher ────
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    # ── Regular consumer config for result readers ───────────────
+    consumer:
+      group-id: streams-result-reader
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.queuedockyard.*"
+
+# ── Topic names ────────────────────────────────────────────────────
+app:
+  kafka:
+    topics:
+      # input topic — same topic the capstone ecommerce app publishes to
+      # if ecommerce app is running, its orders feed into these streams
+      orders-input: order-events
+
+      # output topics — streams write results here
+      placed-orders: placed-order-events        # Pipeline 1 output
+      customer-counts: customer-order-counts    # Pipeline 2 output
+      revenue-per-minute: revenue-per-minute    # Pipeline 3 output
+
+server:
+  port: 8089
