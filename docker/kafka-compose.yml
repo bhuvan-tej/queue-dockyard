@@ -101,3 +101,29 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local-kafka         # display name in the UI
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092   # connect via internal listener
+
+  # ── Schema Registry ────────────────────────────────────────────
+  # Stores and validates Avro schemas.
+  # Producers register schemas before publishing.
+  # Consumers fetch schemas to deserialize messages.
+  # REST API available at http://localhost:8081
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.7.0
+    container_name: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"     # Schema Registry REST API
+    environment:
+      # connect to Kafka broker
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+      # hostname Schema Registry advertises to clients
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      # listen on all interfaces
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      interval: 15s
+      timeout: 10s
+      retries: 5

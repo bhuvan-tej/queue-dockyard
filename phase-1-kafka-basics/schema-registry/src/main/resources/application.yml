@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: schema-registry
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      # Confluent's Avro serializer — replaces JsonSerializer.
+      # Before sending each message it:
+      #   1. Checks if this schema is registered in Schema Registry
+      #   2. If not — registers it and gets back a schema ID
+      #   3. Serializes the message to Avro binary
+      #   4. Prepends the 5-byte magic header: [0x00][schema-id-4-bytes]
+      # The consumer uses those 5 bytes to fetch the right schema.
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+
+      properties:
+        # Schema Registry URL — where schemas are registered and fetched
+        schema.registry.url: http://localhost:8081
+
+        # auto.register.schemas=true (default) — producer registers
+        # the schema automatically on first publish.
+        # In production set to false — schemas registered via CI/CD only.
+        # Setting to false here would mean you must register manually first.
+        auto.register.schemas: true
+
+# ── Custom properties ──────────────────────────────────────────────
+app:
+  kafka:
+    topics:
+      orders-v1: schema-orders-v1     # uses OrderEvent schema
+      orders-v2: schema-orders-v2     # uses OrderEventV2 schema
+
+server:
+  port: 8090

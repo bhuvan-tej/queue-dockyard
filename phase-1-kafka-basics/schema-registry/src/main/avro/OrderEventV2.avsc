@@ -1,0 +1,54 @@
+{
+  "namespace": "com.queuedockyard.schema",
+  "type": "record",
+  "name": "OrderEventV2",
+  "doc": "Version 2 of OrderEvent — adds an optional 'region' field with a default value. This is a BACKWARD COMPATIBLE change — existing consumers that don't know about 'region' can still read V2 messages because the field has a default. Schema Registry will accept this schema.",
+  "fields": [
+    {
+      "name": "messageId",
+      "type": "string",
+      "doc": "Unique idempotency key"
+    },
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "Unique order identifier"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "doc": "Customer who placed the order"
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "doc": "Total order value"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "OrderStatus",
+        "symbols": ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"]
+      },
+      "doc": "Current order status"
+    },
+    {
+      "name": "createdAt",
+      "type": "string",
+      "doc": "ISO timestamp when this event was created"
+    },
+    {
+      "name": "region",
+      "type": "string",
+      "default": "UNKNOWN",
+      "doc": "NEW FIELD in V2 — geographic region of the order. Has a default value of UNKNOWN so consumers using V1 schema can still read this message. Without a default, this would be a BREAKING change and Schema Registry would reject it."
+    },
+    {
+      "name": "customerEmail",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "NEW OPTIONAL FIELD — union type ['null', 'string'] means this field can be null. default: null makes it optional. Another safe backward-compatible addition."
+    }
+  ]
+}

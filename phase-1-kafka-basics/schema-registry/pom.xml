@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.5.14</version>
+		<relativePath/>
+	</parent>
+
+	<groupId>com.queuedockyard</groupId>
+	<artifactId>schema-registry</artifactId>
+	<version>1.0.0</version>
+	<packaging>jar</packaging>
+
+	<name>schema-registry</name>
+	<description>
+		Demonstrates Apache Kafka with Schema Registry and Avro serialization.
+
+		Shows the problem with plain JSON (no contract enforcement)
+		and solves it with:
+		1. Avro schema — strict type definition in .avsc file
+		2. Schema Registry — central schema store, validates compatibility
+		3. Confluent Avro Serializer — producer registers schema, serializes to binary
+		4. Confluent Avro Deserializer — consumer fetches schema, deserializes correctly
+
+		Also demonstrates schema evolution — adding a field without
+		breaking existing consumers (backward compatibility).
+	</description>
+
+	<properties>
+		<java.version>21</java.version>
+		<confluent.version>7.7.0</confluent.version>
+	</properties>
+
+	<!-- ─────────────────────────────────────────────────────────
+         Confluent Maven Repository
+         Confluent's Avro serializer and Schema Registry client
+         are not on Maven Central — they are on Confluent's own repo.
+         Without this, the dependencies below will not be found.
+    ───────────────────────────────────────────────────────────── -->
+	<repositories>
+		<repository>
+			<id>confluent</id>
+			<url>https://packages.confluent.io/maven/</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+		</dependency>
+		<!-- Confluent Avro Serializer/Deserializer
+            Handles:
+              - Registering schemas with Schema Registry
+              - Serializing Java objects to Avro binary
+              - Fetching schemas from Registry on deserialization
+              - Embedding schema ID in every message (first 5 bytes)
+            This is what makes Schema Registry work transparently. -->
+		<dependency>
+			<groupId>io.confluent</groupId>
+			<artifactId>kafka-avro-serializer</artifactId>
+			<version>${confluent.version}</version>
+		</dependency>
+
+		<!-- Apache Avro — core library for Avro schema parsing
+             and data serialization. The Confluent serializer
+             depends on this internally. -->
+		<dependency>
+			<groupId>org.apache.avro</groupId>
+			<artifactId>avro</artifactId>
+			<version>1.11.3</version>
+		</dependency>
+
+		<!-- Avro Maven Plugin — generates Java classes from .avsc schema files.
+             Without this you would write Java classes manually and keep
+             them in sync with schemas — error prone and tedious.
+             The plugin generates them automatically at build time. -->
+		<dependency>
+			<groupId>org.apache.avro</groupId>
+			<artifactId>avro-maven-plugin</artifactId>
+			<version>1.11.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+
+			<!-- Avro Maven Plugin — generates Java classes from .avsc files.
+                 Runs automatically during the generate-sources phase (before compile).
+                 Generated classes appear in target/generated-sources/avro/
+                 IntelliJ picks them up automatically after Maven reload. -->
+			<plugin>
+				<groupId>org.apache.avro</groupId>
+				<artifactId>avro-maven-plugin</artifactId>
+				<version>1.11.3</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>schema</goal>
+						</goals>
+						<configuration>
+							<!-- where your .avsc schema files live -->
+							<sourceDirectory>
+								${project.basedir}/src/main/avro
+							</sourceDirectory>
+							<!-- where generated Java classes will appear -->
+							<outputDirectory>
+								${project.build.directory}/generated-sources/avro
+							</outputDirectory>
+							<!-- generate builder pattern (like Lombok @Builder) -->
+							<stringType>String</stringType>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

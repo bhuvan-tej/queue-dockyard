@@ -1,0 +1,43 @@
+{
+  "namespace": "com.queuedockyard.schema",
+  "type": "record",
+  "name": "OrderEvent",
+  "doc": "Represents an order event published to Kafka. This schema is the contract between producer and consumer. Any change here must be backward or forward compatible — breaking changes are rejected by Schema Registry.",
+  "fields": [
+    {
+      "name": "messageId",
+      "type": "string",
+      "doc": "Unique idempotency key — UUID generated at publish time"
+    },
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "Unique order identifier"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "doc": "Customer who placed the order"
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "doc": "Total order value"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "OrderStatus",
+        "symbols": ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"],
+        "doc": "Avro enum — only these values are valid. Any other value is rejected at serialization time. This is type enforcement JSON cannot provide."
+      },
+      "doc": "Current order status"
+    },
+    {
+      "name": "createdAt",
+      "type": "string",
+      "doc": "ISO timestamp when this event was created. Using string for simplicity — in production use logicalType timestamp-millis"
+    }
+  ]
+}
