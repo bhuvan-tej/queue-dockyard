@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: kafka-dlt
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    consumer:
+      group-id: kafka-dlt-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.queuedockyard.*"
+
+# ── Custom properties ──────────────────────────────────────────────
+app:
+  kafka:
+    topics:
+      # main topic — first attempt
+      orders: dlt.orders
+
+      # retry topics — created automatically by Spring Kafka
+      # when @RetryableTopic is used. Named by convention:
+      #   <main-topic>-retry-<delay-ms>
+      # We define names here for documentation purposes only.
+      retry-1: dlt.orders-retry-10000      # retry after 10 seconds
+      retry-2: dlt.orders-retry-30000      # retry after 30 seconds
+      retry-3: dlt.orders-retry-60000      # retry after 60 seconds
+
+      # dead letter topic — permanent failure
+      # naming convention: <main-topic>-dlt
+      dlt: dlt.orders-dlt
+
+server:
+  port: 8091
