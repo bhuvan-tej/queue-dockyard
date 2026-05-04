@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────────
+# Test-specific configuration.
+# Loaded automatically when @ActiveProfiles("test") is used
+# or when spring.profiles.active=test is set.
+#
+# These values are mostly placeholders — @ServiceConnection in
+# TestContainersConfig overrides the actual host/port values
+# with whatever the test containers are running on.
+# ─────────────────────────────────────────────────────────────────
+
+spring:
+  # Kafka — overridden by @ServiceConnection
+  kafka:
+    bootstrap-servers: localhost:9092   # placeholder — overridden
+    consumer:
+      auto-offset-reset: earliest       # always read from beginning in tests
+
+  # RabbitMQ — overridden by @ServiceConnection
+  rabbitmq:
+    host: localhost                     # placeholder — overridden
+    port: 5672                          # placeholder — overridden
+
+  # Redis — overridden by @ServiceConnection
+  data:
+    redis:
+      host: localhost                   # placeholder — overridden
+      port: 6379                        # placeholder — overridden
+
+# AWS LocalStack — keep pointing to localhost for tests
+# In a full test setup you would use LocalStack Testcontainer
+# For now we skip SQS assertions in tests to keep it simple
+aws:
+  endpoint: http://localhost:4566
+  region: us-east-1
+  credentials:
+    access-key: test
+    secret-key: test
+  sqs:
+    invoice-queue-name: invoice-queue-test
+    visibility-timeout: 30
+    wait-time-seconds: 1
+
+# custom app properties — same as main
+app:
+  kafka:
+    topics:
+      orders: ecommerce.order.events.test   # separate test topic
+
+  rabbitmq:
+    exchange: ecommerce.notifications.exchange.test
+    queues:
+      email: ecommerce.email.queue.test
+      sms: ecommerce.sms.queue.test
+
+# use a different port so tests don't conflict with running app
+server:
+  port: 0   # random port — tests use MockMvc, no fixed port needed
+
+# suppress noisy logs during tests
+logging:
+  level:
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN
+    org.apache.kafka: WARN
+    org.springframework.kafka: INFO
+    com.queuedockyard: INFO
