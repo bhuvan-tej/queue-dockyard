@@ -11,6 +11,8 @@
 queue-dockyard/
 ├── docs/
 │   ├── fundamentals/        ← concepts, patterns, vocabulary, delivery guarantees
+│   ├── interview/           ← interview questions + answers
+│   ├── monitoring/          ← monitoring, alerting, and observability for messaging systems
 │   └── systems/             ← Kafka, RabbitMQ, SQS deep dives + comparison
 ├── docker/                  ← local infra for all three systems
 ├── phase-1-kafka-basics/    ← first producer + consumer, schema registry, Avro, DLT
