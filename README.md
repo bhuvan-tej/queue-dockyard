@@ -54,5 +54,5 @@ You need these installed before writing any code:
 | Java 17+       | All Spring Boot apps run on Java 17      | `sdk install java 17` via SDKMAN   |
 | Docker Desktop | Runs Kafka, RabbitMQ, LocalStack locally | docker.com/products/docker-desktop |
 | Maven 3.8+     | Builds the Spring Boot projects          | `brew install maven` or SDKMAN     |
-| IntelliJ IDEA  | Best Java IDE, excellent Spring support  | jetbrains.com/idea                 |
+| IntelliJ IDEA  | Best Java IDE                            | jetbrains.com/idea                 |
 | AWS CLI        | Needed to interact with LocalStack SQS   | `brew install awscli`              |
