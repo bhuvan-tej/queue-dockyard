@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
 
 /**
  * Kafka Streams configuration.
@@ -40,6 +42,25 @@ public class KafkaStreamsConfig {
 
     @Value("${app.kafka.topics.revenue-per-minute}")
     private String revenuePerMinuteTopic;
+
+    @Value("${app.kafka.topics.payment-events}")
+    private String paymentEventsTopic;
+
+    @Value("${app.kafka.topics.enriched-orders}")
+    private String enrichedOrdersTopic;
+
+    @Value("${app.kafka.topics.enriched-orders-left}")
+    private String enrichedOrdersLeftTopicName;
+
+    /**
+     * KafkaTemplate typed to Object — allows publishing
+     * both OrderEvent and PaymentEvent from the same template.
+     * The JsonSerializer uses the actual runtime type to serialize.
+     */
+    @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
 
     /**
      * Input topic — where OrderEvents come from.
@@ -91,6 +112,46 @@ public class KafkaStreamsConfig {
     public NewTopic revenuePerMinuteTopic() {
         return TopicBuilder
                 .name(revenuePerMinuteTopic)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    /**
+     * Payment events topic — second input stream for the join.
+     * MUST have the same partition count as order-events (3)
+     * for co-partitioning — required for Kafka Streams joins.
+     */
+    @Bean
+    public NewTopic paymentEventsTopic() {
+        return TopicBuilder
+                .name(paymentEventsTopic)
+                .partitions(3)   // must match order-events partition count
+                .replicas(1)
+                .build();
+    }
+
+    /**
+     * Inner join output — enriched events where both order
+     * and payment matched within the join window.
+     */
+    @Bean
+    public NewTopic enrichedOrdersTopic() {
+        return TopicBuilder
+                .name(enrichedOrdersTopic)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    /**
+     * Left join output — enriched events where order always
+     * produces output, payment fields null if no match.
+     */
+    @Bean
+    public NewTopic enrichedOrdersLeftTopic() {
+        return TopicBuilder
+                .name(enrichedOrdersLeftTopicName)
                 .partitions(3)
                 .replicas(1)
                 .build();

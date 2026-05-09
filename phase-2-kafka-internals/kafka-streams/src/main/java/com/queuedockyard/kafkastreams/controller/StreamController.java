@@ -105,4 +105,95 @@ public class StreamController {
             String status
     ) {}
 
+    /**
+     * Publishes a payment event for a specific order.
+     * Use the orderId returned from POST /api/streams/order.
+     *
+     * POST http://localhost:8089/api/streams/payment
+     * {
+     *   "orderId": "ORD-XXXXXXXX",
+     *   "paymentMethod": "UPI",
+     *   "paymentStatus": "SUCCESS",
+     *   "amount": 1500.00
+     * }
+     */
+    @PostMapping("/payment")
+    public ResponseEntity<Map<String, String>> publishPayment(@RequestBody PaymentRequest request) {
+
+        publisher.publishPayment(
+                request.orderId(),
+                request.paymentMethod(),
+                request.paymentStatus(),
+                request.amount()
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "status", "payment published",
+                "orderId", request.orderId(),
+                "note", "If order was published within 30s — inner join will fire"
+        ));
+    }
+
+    /**
+     * Publishes a matched order + payment pair in quick succession.
+     * Both use the same orderId — guaranteed to hit the join window.
+     *
+     * This is the easiest way to see the inner join fire —
+     * no need to copy-paste orderId between two separate curl calls.
+     *
+     * POST http://localhost:8089/api/streams/join-demo
+     * {
+     *   "customerId": "CUST-001",
+     *   "amount": 2500.00,
+     *   "paymentMethod": "UPI"
+     * }
+     */
+    @PostMapping("/join-demo")
+    public ResponseEntity<Map<String, String>> joinDemo(
+            @RequestBody JoinDemoRequest request) {
+
+        // generate a shared orderId used by both events
+        String orderId = "ORD-" + java.util.UUID.randomUUID()
+                .toString().substring(0, 8).toUpperCase();
+
+        // publish order first
+        publisher.publishOrderWithId(
+                orderId,
+                request.customerId(),
+                request.amount(),
+                "PLACED"
+        );
+
+        // publish payment 1 second later — well within 30s window
+        try { Thread.sleep(1000); } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        publisher.publishPayment(
+                orderId,
+                request.paymentMethod(),
+                "SUCCESS",
+                request.amount()
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "status", "join demo triggered",
+                "orderId", orderId,
+                "note", "Both order and payment published with same orderId — watch logs for INNER JOIN match"
+        ));
+    }
+
+    public record PaymentRequest(
+            String orderId,
+            String paymentMethod,
+            String paymentStatus,
+            Double amount
+    ) {}
+
+    public record JoinDemoRequest(
+            String customerId,
+            Double amount,
+            String paymentMethod
+    ) {}
+
 }

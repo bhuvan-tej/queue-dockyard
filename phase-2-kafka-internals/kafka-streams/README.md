@@ -131,6 +131,62 @@ Zomato, Amazon. The windowed aggregation IS the dashboard data.
 
 ---
 
+### Pipeline 4 — Stream Join (Inner and Left)
+
+### Inner Join
+
+```
+order-events  ──┐
+                ├── join on orderId (within 30s) ──► enriched-order-events
+payment-events ─┘
+```
+
+Produces output ONLY when both order AND payment arrive
+with the same orderId within 30 seconds.
+
+```
+t=0s:  Order ORD-001 arrives → window opens
+t=15s: Payment for ORD-001 arrives → MATCH → enriched event produced ✅
+t=31s: Payment for ORD-002 (order at t=0s) → window closed → NO match ❌
+```
+
+Use when: both order and payment required for downstream processing.
+
+---
+
+### Left Join
+
+```
+order-events  ──┐
+                ├── left join on orderId (within 30s) ──► enriched-order-events-left
+payment-events ─┘
+```
+
+Always produces output when an ORDER arrives.
+Payment fields are null if no matching payment within window.
+
+```
+Order ORD-001 arrives, payment arrives within 30s:
+  → EnrichedOrderEvent { joinType: INNER_JOIN, paymentStatus: SUCCESS }
+
+Order ORD-002 arrives, no payment within 30s:
+  → EnrichedOrderEvent { joinType: LEFT_JOIN, paymentStatus: PENDING, paymentId: null }
+```
+
+Use when: order must always be processed, payment is supplemental.
+
+---
+
+### Co-partitioning requirement
+
+Both input topics MUST have the same number of partitions.
+Kafka Streams joins partition 0 of orders with partition 0 of payments.
+If counts differ, matches are missed silently.
+
+Both `order-events` and `payment-events` use 3 partitions.
+
+---
+
 ## Project Structure
 
 ```
@@ -138,16 +194,19 @@ kafka-streams/
 └── src/main/
      ├── java/com/queuedockyard/kafkastreams/
      │   ├── config/
-     │   │   └── KafkaStreamsConfig.java      ← @EnableKafkaStreams, topic creation
+     │   │   └── KafkaStreamsConfig.java      ← @EnableKafkaStreams, 3 new topic beans topic creation
      │   ├── controller/
-     │   │   └── StreamController.java        ← REST triggers + state store query
+     │   │   └── StreamController.java        ← payment + join-demo endpoints
      │   ├── model/
      │   │   ├── OrderEvent.java              ← input event model
-     │   │   └── RevenueWindow.java           ← Pipeline 3 output model
+     │   │   ├── RevenueWindow.java           ← Pipeline 3 output model
+     │   │   ├── PaymentEvent.java
+     │   │   └── EnrichedOrderEvent.java 
      │   ├── service/
      │   │   └── OrderEventPublisher.java     ← publishes test events
      │   ├── topology/
-     │   │   └── OrderStreamTopology.java     ← all three pipeline definitions
+     │   │   ├── OrderStreamTopology.java     ← all three pipeline definitions
+     │   │   └── JoinStreamTopology.java
      │   └── KafkaStreamsApplication.java
      └── resources/
           └── application.yml
@@ -301,6 +360,33 @@ Watch logs — after 1 minute the window closes and you see:
 ```
 REVENUE PIPELINE | window complete | revenue: 15000.0
 ```
+
+---
+
+### Join experiment
+
+```bash
+# Step 1 — publish an order, note the orderId in the logs
+curl -X POST http://localhost:8089/api/streams/order \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":"CUST-001","amount":1500.00,"status":"PLACED"}'
+
+# Step 2 — within 30 seconds, publish matching payment
+# replace ORD-XXXXXXXX with the orderId from Step 1 logs
+curl -X POST http://localhost:8089/api/streams/payment \
+  -H "Content-Type: application/json" \
+  -d '{"orderId":"ORD-XXXXXXXX","paymentMethod":"UPI","paymentStatus":"SUCCESS","amount":1500.00}'
+
+# Watch logs — INNER JOIN match found, enriched event produced
+
+# Step 3 — publish an order but NO payment (left join demo)
+curl -X POST http://localhost:8089/api/streams/order \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":"CUST-002","amount":2500.00,"status":"PLACED"}'
+
+# Wait 30+ seconds — left join produces event with paymentStatus: PENDING
+```
+
 ---
 
 ## Configuration

@@ -55,5 +55,10 @@ app:
       customer-counts: customer-order-counts    # Pipeline 2 output
       revenue-per-minute: revenue-per-minute    # Pipeline 3 output
 
+      # ── Join pipeline topics ──────────────────────────────
+      payment-events: payment-events                    # second input stream
+      enriched-orders: enriched-order-events            # inner join output
+      enriched-orders-left: enriched-order-events-left  # left join output
+
 server:
   port: 8089

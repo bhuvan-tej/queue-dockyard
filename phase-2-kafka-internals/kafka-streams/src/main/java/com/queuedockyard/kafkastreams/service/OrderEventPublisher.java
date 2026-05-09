@@ -1,6 +1,7 @@
 package com.queuedockyard.kafkastreams.service;
 
 import com.queuedockyard.kafkastreams.model.OrderEvent;
+import com.queuedockyard.kafkastreams.model.PaymentEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,10 +27,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderEventPublisher {
 
-    private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Value("${app.kafka.topics.orders-input}")
     private String ordersInputTopic;
+
+    @Value("${app.kafka.topics.payment-events}")
+    private String paymentEventsTopic;
 
     /**
      * Publishes a single order event.
@@ -90,6 +94,71 @@ public class OrderEventPublisher {
 
         log.info("Batch published | total: {} | PLACED: 7 | non-PLACED: 2",
                 orders.size());
+    }
+
+    /**
+     * Publishes a payment event for a specific order.
+     *
+     * Uses orderId as the message KEY — critical for the join.
+     * Kafka Streams joins on key — both order and payment must
+     * have the same key (orderId) to be matched.
+     *
+     * @param orderId       must match an existing order's orderId
+     * @param paymentMethod how the customer paid
+     * @param paymentStatus outcome of the payment
+     * @param amount        amount charged
+     */
+    public void publishPayment(String orderId,
+                               String paymentMethod,
+                               String paymentStatus,
+                               Double amount) {
+
+        PaymentEvent event = PaymentEvent.builder()
+                .orderId(orderId)
+                .paymentId("PAY-" + UUID.randomUUID().toString()
+                        .substring(0, 8).toUpperCase())
+                .paymentMethod(paymentMethod)
+                .paymentStatus(paymentStatus)
+                .amount(amount)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        // orderId as KEY — matches order event key for the join
+        kafkaTemplate.send(paymentEventsTopic, orderId, event);
+
+        log.info("Payment published | orderId: {} | paymentId: {} | status: {}",
+                orderId, event.getPaymentId(), paymentStatus);
+    }
+
+    /**
+     * Publishes an order with a specific orderId.
+     * Used by the join demo so both order and payment
+     * share the exact same orderId for a guaranteed match.
+     */
+    /**
+     * Publishes an order with a specific orderId.
+     * Used by the join demo so both order and payment
+     * share the exact same orderId for a guaranteed match.
+     */
+    public void publishOrderWithId(String orderId,
+                                   String customerId,
+                                   Double amount,
+                                   String status) {
+
+        OrderEvent event = OrderEvent.builder()
+                .messageId(java.util.UUID.randomUUID().toString())
+                .orderId(orderId)
+                .customerId(customerId)
+                .amount(amount)
+                .items("Join Demo Item")
+                .status(status)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        kafkaTemplate.send(ordersInputTopic, orderId, event);
+
+        log.info("Published | orderId: {} | customerId: {} | amount: {} | status: {}",
+                orderId, customerId, amount, status);
     }
 
 }
