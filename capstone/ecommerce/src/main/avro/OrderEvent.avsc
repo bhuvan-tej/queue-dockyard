@@ -1,0 +1,58 @@
+{
+  "namespace": "com.queuedockyard.ecommerce.avro",
+  "type": "record",
+  "name": "OrderEvent",
+  "doc": "Contract for order events flowing through the ecommerce pipeline. Registered with Schema Registry — breaking changes rejected at publish time. All Kafka consumers (Inventory, Analytics) deserialize using this schema.",
+  "fields": [
+    {
+      "name": "messageId",
+      "type": "string",
+      "doc": "Global idempotency key — UUID generated once at order placement. Same messageId stamped on Kafka, RabbitMQ, and SQS messages."
+    },
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "Unique order identifier. Used as Kafka message key — same orderId always routes to same partition."
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "doc": "Customer who placed the order."
+    },
+    {
+      "name": "customerEmail",
+      "type": "string",
+      "doc": "Customer email address — used by Email Service for notifications."
+    },
+    {
+      "name": "customerPhone",
+      "type": "string",
+      "doc": "Customer phone number — used by SMS Service for notifications."
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "doc": "Total order value."
+    },
+    {
+      "name": "items",
+      "type": "string",
+      "doc": "Comma-separated list of ordered items."
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "OrderStatus",
+        "doc": "Only these values are valid. Any other value rejected at serialization time — type safety JSON cannot provide.",
+        "symbols": ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"]
+      },
+      "doc": "Current order status."
+    },
+    {
+      "name": "createdAt",
+      "type": "string",
+      "doc": "ISO timestamp when this event was created. Set by the producer — never trust the consumer clock."
+    }
+  ]
+}

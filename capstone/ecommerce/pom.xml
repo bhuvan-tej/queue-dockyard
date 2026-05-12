@@ -34,6 +34,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<aws.sdk.version>2.25.23</aws.sdk.version>
+		<confluent.version>7.7.0</confluent.version>
 	</properties>
 
 	<dependencyManagement>
@@ -57,6 +58,13 @@
 
 		</dependencies>
 	</dependencyManagement>
+
+	<repositories>
+		<repository>
+			<id>confluent</id>
+			<url>https://packages.confluent.io/maven/</url>
+		</repository>
+	</repositories>
 
 	<dependencies>
 		<dependency>
@@ -185,6 +193,23 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Confluent Avro Serializer/Deserializer —
+     	registers schemas with Schema Registry,
+     	serializes Java objects to Avro binary,
+     	prepends 5-byte header (magic + schema ID) to every message -->
+		<dependency>
+			<groupId>io.confluent</groupId>
+			<artifactId>kafka-avro-serializer</artifactId>
+			<version>${confluent.version}</version>
+		</dependency>
+
+		<!-- Apache Avro core — schema parsing and binary serialization -->
+		<dependency>
+			<groupId>org.apache.avro</groupId>
+			<artifactId>avro</artifactId>
+			<version>1.11.3</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -201,6 +226,30 @@
 					</excludes>
 				</configuration>
 			</plugin>
+
+			<plugin>
+				<groupId>org.apache.avro</groupId>
+				<artifactId>avro-maven-plugin</artifactId>
+				<version>1.11.3</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>schema</goal>
+						</goals>
+						<configuration>
+							<sourceDirectory>
+								${project.basedir}/src/main/avro
+							</sourceDirectory>
+							<outputDirectory>
+								${project.build.directory}/generated-sources/avro
+							</outputDirectory>
+							<stringType>String</stringType>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 		</plugins>
 	</build>
 
