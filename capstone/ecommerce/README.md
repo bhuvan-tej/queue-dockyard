@@ -230,30 +230,3 @@ The dashboard auto-refreshes every 10 seconds and shows:
 | Business metrics    | `MetricsService` — counters and timers per consumer |
 | Publish duration    | Timer wrapping all three system publishes           |
 | Duplicate detection | Counter incremented when duplicate messageId found  |
-
-
-### Idempotency — In-memory vs Redis
-
-Phase 2 used an in-memory store for processed message IDs.
-The capstone uses Redis:
-
-|                         | In-memory | Redis        |
-|-------------------------|-----------|--------------|
-| Survives restart        | ❌         | ✅            |
-| Shared across instances | ❌         | ✅            |
-| Auto-expiry (TTL)       | ❌         | ✅ (24 hours) |
-| Performance             | O(1)      | O(1)         |
-
-```
-// check before processing
-if (idempotencyStore.isAlreadyProcessed(event.getMessageId())) {
-    metricsService.recordDuplicateDetected();
-    return;
-}
-
-// process the event
-processOrder(event);
-
-// mark after success — never before
-idempotencyStore.markAsProcessed(event.getMessageId());
-```
