@@ -86,8 +86,8 @@ queue-dockyard/
 │
 └── capstone/
     └── ecommerce/                            ← all three systems in one production pipeline
-                                                 Redis idempotency, Prometheus metrics,
-                                                 Grafana dashboard, Testcontainers tests
+                                                Prometheus metrics, Grafana dashboard, 
+                                                Testcontainers tests
 ```
 
 ---
