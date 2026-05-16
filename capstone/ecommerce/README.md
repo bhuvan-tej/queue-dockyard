@@ -13,34 +13,22 @@ Customer → POST /api/orders
                 ▼
           Order Producer
                 │
-     ┌──────────┼──────────┐
-     ▼          ▼          ▼
+     ┌──────────┼───────────┐
+     ▼          ▼           ▼
    Kafka     RabbitMQ      SQS
-     │          │          │
-     │          │          ▼
+     │          │           │
+     │          │           ▼
      │          │    Invoice Generator
      │          │
      │      ┌───┴───┐
      │      ▼       ▼
-     │    Email     SMS
+     │    Email    SMS
      │
- ┌───┴────┐
- ▼        ▼
+ ┌───┴───────┐
+ ▼           ▼
 Inventory Analytics
 Consumer  Consumer
  (inv)     (ana)
-```
-
----
-
-## Monitoring Stack
-
-This app is fully instrumented with Spring Boot Actuator,
-Micrometer, and Prometheus. A Grafana dashboard visualizes
-all metrics in real time.
-
-```
-Spring Boot App → /actuator/prometheus → Prometheus → Grafana
 ```
 
 ---
@@ -61,8 +49,9 @@ Spring Boot App → /actuator/prometheus → Prometheus → Grafana
 
 ### Idempotency across all systems
 One `messageId` (UUID) generated at order placement.
-Stamped on every Kafka message, RabbitMQ message, and SQS message.
-Any consumer seeing the same `messageId` twice can safely skip.
+Stamped on every Kafka, RabbitMQ, and SQS message.
+Stored in Redis after processing — survives restarts.
+Any consumer seeing the same `messageId` twice skips processing.
 
 ### Consumer group independence (Kafka)
 `InventoryConsumer` uses `ecommerce-inventory-group`.
@@ -78,6 +67,12 @@ Kafka and RabbitMQ push messages to consumers.
 SQS requires consumers to poll — `InvoiceConsumer` runs a polling loop.
 In production, AWS Lambda handles this automatically.
 
+### Dead Letter Topic — inventory consumer (Addition 3)
+The inventory consumer has non-blocking retry with DLT.
+A simulated warehouse system failure triggers:
+retry 1 (5s) → retry 2 (15s) → retry 3 (30s) → DLT
+Main topic never blocked — other orders keep processing.
+
 ---
 
 ## Project Structure
@@ -85,57 +80,47 @@ In production, AWS Lambda handles this automatically.
 ```
 ecommerce/
 └── src/main/
-     ├── java/com/queuedockyard/ecommerce/
-     │   ├── config/
-     │   │   ├── KafkaConfig.java           ← topic, manual ACK factory
-     │   │   ├── RabbitMQConfig.java        ← fanout exchange, email+sms queues
-     │   │   ├── SqsConfig.java             ← SQS client → LocalStack
-     │   │   └── SqsQueueInitializer.java   ← creates invoice queue on startup
-     │   ├── consumer/
-     │   │   ├── InventoryConsumer.java     ← Kafka, inventory-group
-     │   │   ├── AnalyticsConsumer.java     ← Kafka, analytics-group
-     │   │   ├── EmailConsumer.java         ← RabbitMQ, email queue
-     │   │   ├── SmsConsumer.java           ← RabbitMQ, sms queue
-     │   │   └── InvoiceConsumer.java       ← SQS polling loop
-     │   ├── controller/
-     │   │   └── OrderController.java       ← POST /api/orders
-     |   ├── metrics/
-     │   │   └── MetricsService.java        ← custom Micrometer metrics
-     │   ├── model/
-     │   │   └── OrderEvent.java            ← shared event model
-     │   ├── service/
-     │   │   └── OrderEventPublisher.java   ← publishes to all three systems
-     │   ├── store/
-     │   │   └── RedisIdempotencyStore.java   ← Redis-backed idempotency key store
-     │   └── EcommerceApplication.java
-     └── resources/
-         └── application.yml
+    ├── java/com/queuedockyard/ecommerce/
+    │   ├── config/
+    │   │   ├── KafkaConfig.java           ← topics, producer, consumer factory
+    │   │   ├── RabbitMQConfig.java        ← fanout exchange, email+sms queues
+    │   │   ├── SqsConfig.java             ← SQS client → LocalStack
+    │   │   └── SqsQueueInitializer.java   ← creates invoice queue on startup
+    │   ├── consumer/
+    │   │   ├── InventoryConsumer.java     ← Kafka, inventory-group, DLT retry
+    │   │   ├── AnalyticsConsumer.java     ← Kafka, analytics-group
+    │   │   ├── EmailConsumer.java         ← RabbitMQ, email queue
+    │   │   ├── SmsConsumer.java           ← RabbitMQ, sms queue
+    │   │   └── InvoiceConsumer.java       ← SQS polling loop
+    │   ├── controller/
+    │   │   └── OrderController.java       ← POST /api/orders
+    │   │   └── InventoryDltController.java ← GET /api/inventory/failed
+    │   ├── metrics/
+    │   │   └── MetricsService.java        ← Prometheus custom metrics
+    │   ├── model/
+    │   │   └── OrderEvent.java            ← shared event model
+    │   ├── service/
+    │   │   └── OrderEventPublisher.java   ← publishes to all three systems
+    │   └── store/
+    │       └── RedisIdempotencyStore.java ← Redis-backed idempotency
+    └── resources/
+        └── application.yml
 ```
 
 ---
 
 ## How to Run
 
-Start all infrastructure first:
+Start all infrastructure:
 
 ```bash
-# terminal 1 — Kafka
 docker compose -f docker/kafka-compose.yml up -d
-
-# terminal 2 — RabbitMQ
 docker compose -f docker/rabbit-compose.yml up -d
-
-# terminal 3 — LocalStack
 docker compose -f docker/localstack-compose.yml up -d
-
-# Start the monitoring stack
 docker compose -f docker/monitoring-compose.yml up -d
-
-# verify all are healthy
-docker ps
 ```
 
-Then start the app:
+Start the app:
 
 ```bash
 cd capstone/ecommerce
@@ -147,15 +132,6 @@ App starts on port **8088**.
 ---
 
 ## Place an Order
-
-### Health check
-
-```
-curl http://localhost:8088/actuator/health
-```
-
-Shows status of Redis, Kafka, RabbitMQ, and disk space.
-All components should show UP before placing orders.
 
 ```bash
 curl -X POST http://localhost:8088/api/orders \
@@ -172,61 +148,59 @@ curl -X POST http://localhost:8088/api/orders \
 
 ## What You Should See in Logs
 
-Within 3 seconds of placing the order:
 ```
-OrderEventPublisher | Publishing order event | messageId: abc-123
-KAFKA    | published | partition: 1 | offset: 0
-RABBITMQ | published to fanout exchange
-SQS      | published to invoice queue
+KAFKA    | published | messageId: abc-123 | partition: 1 | offset: 0
+RABBITMQ | published | messageId: abc-123
+SQS      | published | messageId: abc-123
 
-INVENTORY | received | items: Laptop Stand, USB Hub, Mousepad
-INVENTORY | deducting stock...
-
-ANALYTICS | received | revenue: 2500.0 | customer: CUST-001
-ANALYTICS | recording...
-
-EMAIL | sending confirmation | to: customer@example.com
-EMAIL | sent and ACKed
-SMS | sending | to: +91-9999999999 | message: 'Order ORD-001 placed...'
-SMS | sent and ACKed
-
-INVOICE | generating | invoiceNo: INV-ORD-001 | amount: ₹2500.0
-INVOICE | generated and deleted from SQS
+INVENTORY | received | orderId: ORD-001 | items: Laptop Stand, USB Hub, Mousepad
+ANALYTICS | received | amount: 2500.0   | customer: CUST-001
+EMAIL     | sending confirmation | to: customer@example.com
+SMS       | sending | to: +91-9999999999
+INVOICE   | generating | invoiceNo: INV-ORD-001 | amount: ₹2500.0
 ```
 
 All five consumers respond to a single order placement.
 
-## Grafana Dashboard
-
-Open http://localhost:3000 → Dashboards → Queue Dockyard
-
-The dashboard auto-refreshes every 10 seconds and shows:
-- Order pipeline throughput across all 5 consumers
-- Publish duration p50/p95/p99
-- Duplicate message detection count
-- JVM heap memory and thread counts
-- HTTP request rate and latency
-
 ---
 
-## Configuration
+## Monitoring
 
-| Property                     | Value                              | Description        |
-|------------------------------|------------------------------------|--------------------|
-| `app.kafka.topics.orders`    | `ecommerce.order.events`           | Shared Kafka topic |
-| `app.rabbitmq.exchange`      | `ecommerce.notifications.exchange` | Fanout exchange    |
-| `aws.sqs.invoice-queue-name` | `invoice-queue`                    | SQS invoice queue  |
-| `server.port`                | `8088`                             | HTTP port          |
+| URL                                       | What it shows                          |
+|-------------------------------------------|----------------------------------------|
+| http://localhost:8088/actuator/health     | Kafka, RabbitMQ, Redis status          |
+| http://localhost:8088/actuator/prometheus | Raw Prometheus metrics                 |
+| http://localhost:8080                     | Kafka UI — topics and messages         |
+| http://localhost:15672                    | RabbitMQ UI — queues and consumers     |
+| http://localhost:3000                     | Grafana — ecommerce pipeline dashboard |
 
 ---
 
 ## Production Hardening Applied
 
-| Pattern             | Implementation                                      |
-|---------------------|-----------------------------------------------------|
-| Health checks       | Spring Boot Actuator `/actuator/health`             |
-| Metrics exposure    | Micrometer + Prometheus at `/actuator/prometheus`   |
-| Redis idempotency   | `RedisIdempotencyStore` replaces in-memory store    |
-| Business metrics    | `MetricsService` — counters and timers per consumer |
-| Publish duration    | Timer wrapping all three system publishes           |
-| Duplicate detection | Counter incremented when duplicate messageId found  |
+| Pattern             | Implementation                                     |
+|---------------------|----------------------------------------------------|
+| Health checks       | Spring Boot Actuator `/actuator/health`            |
+| Metrics             | Micrometer + Prometheus at `/actuator/prometheus`  |
+| Redis idempotency   | `RedisIdempotencyStore` — survives restarts        |
+| Business metrics    | `MetricsService` — counters per consumer           |
+| Publish duration    | Timer wrapping all three system publishes          |
+| Duplicate detection | Counter incremented on duplicate messageId         |
+| Non-blocking retry  | Inventory consumer — retry topics + DLT            |
+| Testcontainers      | Integration tests with real Kafka, RabbitMQ, Redis |
+
+---
+
+## Note on Kafka Streams
+
+Kafka Streams stream processing is demonstrated as a standalone
+project in `phase-3-kafka-internals/kafka-streams`.
+
+Running Kafka Streams alongside regular Kafka consumers in the
+same Spring Boot app requires careful coordination of internal
+repartition topic serdes — a production concern that adds
+complexity beyond the scope of this capstone.
+
+In production, Kafka Streams applications are typically deployed
+as separate services from regular consumers for exactly this reason:
+clean separation of concerns, independent scaling, and no serde conflicts.
