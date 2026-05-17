@@ -8,15 +8,30 @@ The `notification-consumer` reads what this app publishes.
 ---
 
 ## What This App Does
+
+An HTTP endpoint accepts an order request.
+
+`OrderController` builds an `OrderEvent` and passes it to`OrderProducerService`.
+
+`KafkaTemplate.send()` publishes the event asynchronously to the `order-events` topic using the `orderId` as the message key.
+
+The send is non-blocking — it returns a `CompletableFuture` and the app moves on immediately.
+
+The callback fires when Kafka confirms the write or fails after retries.
+
 ```
 HTTP POST /api/orders
-↓
+        ↓
 OrderController  →  builds OrderEvent
-↓
+        ↓
 OrderProducerService  →  publishes to Kafka
-↓
-Kafka topic: order-events  (3 partitions)
-↓
+        ↓
+KafkaTemplate.send(topic, key, value)
+        ↓
+Kafka broker writes to partition (3 partitions)
+        ↓
+CompletableFuture callback fires → log partition + offset
+        ↓
 notification-consumer picks it up
 ```
 ---
@@ -24,19 +39,46 @@ notification-consumer picks it up
 ## Key Concepts Demonstrated
 
 ### Message Key
+
+```
+KafkaTemplate.send(topic, KEY, value)
 Every message is sent with `orderId` as the Kafka key.
 Kafka uses the key to decide which partition to write to.
 Same key → same partition → ordering guaranteed for that order.
+```
 
 ### Async Send
+
+```
 `KafkaTemplate.send()` is non-blocking — it returns a `CompletableFuture`.
 The app does not wait for Kafka to confirm. The callback fires when Kafka responds.
 This is why Kafka producers are extremely fast.
+```
 
 ### Topic Auto-Creation
+
+```
 `KafkaProducerConfig` registers a `NewTopic` bean.
 Spring Kafka creates the topic on startup if it does not already exist.
 In production, you would create topics via CLI or Terraform — never auto-create.
+```
+
+**`acks=all` — safest producer config:**
+
+```
+acks=0  → fire and forget, no confirmation
+acks=1  → leader confirms, replicas may not have it
+acks=all → all in-sync replicas confirm → no data loss
+```
+
+**Idempotent producer:**
+
+```
+enable.idempotence=true
+Kafka assigns producer ID + sequence number per message
+If same message sent twice (retry after network blip) → Kafka deduplicates at broker level
+Protects against producer-side duplicates only
+```
 
 ---
 
