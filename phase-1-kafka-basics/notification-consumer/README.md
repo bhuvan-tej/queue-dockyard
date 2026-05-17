@@ -3,23 +3,35 @@
 A Spring Boot application that acts as a Kafka consumer, listening to the `order-events` topic and simulating
 email and SMS notifications when an order event arrives.
 
-This is the second half of the Phase 2 demo.
+This is the second half of the Phase 1 demo.
 It reads what `order-producer` publishes.
 
 ---
 
 ## What This App Does
 
+A `@KafkaListener` annotated method reads from the `order-events` topic.
+
+Spring Kafka deserializes JSON bytes back to an `OrderEvent` object automatically.
+
+The consumer simulates sending email and SMS notifications then stores received events in memory for inspection.
+
+The `groupId` is the critical config — all instances sharing the same `groupId` split the partitions between them.
+
+Change the `groupId` and each instance gets ALL messages independently.
+
 ```
 Kafka topic: order-events
-↓
-OrderEventConsumer  →  receives ConsumerRecord
-↓
+        ↓
+OrderEventConsumer  →  @KafkaListener reads ConsumerRecord
+        ↓
+JsonDeserializer converts bytes → OrderEvent
+        ↓
 NotificationService  →  processes event
-↓
+        ↓
 Simulated email + SMS logs
-↓
-Event stored in memory → inspectable via REST
+        ↓
+Event stored in memory → inspectable via REST - GET /api/notifications
 ```
 
 ---
@@ -27,26 +39,62 @@ Event stored in memory → inspectable via REST
 ## Key Concepts Demonstrated
 
 ### Consumer Group
+```
 This app uses `group-id: notification-group`.
-If you run two instances of this app, Kafka splits the
-3 partitions between them — each instance handles some partitions.
+
+Same groupId = partitions shared (load balancing)
+  3 partitions + 3 consumers = 1 partition per consumer
+
+Different groupId = all messages delivered independently (pub/sub)
+  Inventory service groupId + Analytics service groupId = both receive every order event
+  
 This is automatic horizontal scaling with zero code changes.
+```
+
+**`auto-offset-reset` — where to start reading:**
+```
+earliest → read from the very beginning of the topic
+latest   → only read new messages arriving after startup
+
+Use earliest in development — you won't miss anything
+Use latest in production — don't reprocess historical data
+```
 
 ### ConsumerRecord vs Direct Value
-The listener uses `ConsumerRecord<String, OrderEvent>` instead of
-just `OrderEvent` directly. This gives access to partition number
-and offset — useful for observing Kafka behavior while learning.
+```
+// Direct value — simpler but no metadata
+@KafkaListener
+public void onMessage(OrderEvent event) { }
+
+// ConsumerRecord — gives partition, offset, timestamp, key
+@KafkaListener
+public void onMessage(ConsumerRecord<String, OrderEvent> record) {
+    record.partition()  // which partition
+    record.offset()     // position in partition
+    record.key()        // message key (orderId)
+    record.value()      // the actual OrderEvent
+}
+
+The listener uses `ConsumerRecord<String, OrderEvent>` instead of just `OrderEvent` directly. 
+This gives access to partition number and offset — useful for observing Kafka behavior while learning.
+```
 
 ### Separation of Concerns
+```
+Consumer class  → Kafka wiring only (@KafkaListener, ConsumerRecord)
+Service class   → business logic only (send email, update inventory)
+
 `OrderEventConsumer` only handles Kafka wiring.
 `NotificationService` only handles business logic.
-This makes both independently testable.
+
+This makes business logic testable without Kafka running
+```
 
 ### Trusted Packages
-The `spring.json.trusted.packages` config tells the JsonDeserializer
-which packages are safe to deserialize into Java objects.
-Without this, Kafka will refuse to deserialize the message as a
-security measure against arbitrary class instantiation.
+```
+The `spring.json.trusted.packages` config tells the JsonDeserializer which packages are safe to deserialize into Java objects.
+Without this, Kafka will refuse to deserialize the message as a security measure against arbitrary class instantiation.
+```
 
 ---
 
