@@ -37,18 +37,18 @@ honour system — and honour systems fail in production.
 ## The Solution — Schema Registry + Avro
 ```
 Producer wants to publish
-↓
+        ↓
 Confluent serializer checks schema with Registry
-↓
+        ↓
 Schema compatible → message published as Avro binary
 Schema incompatible → publish REJECTED before reaching Kafka
-↓
+        ↓
 Consumer receives message
-↓
+        ↓
 Confluent deserializer reads schema ID from message header
-↓
+        ↓
 Fetches correct schema from Registry
-↓
+        ↓
 Deserializes to strongly typed Java object
 ```
 
